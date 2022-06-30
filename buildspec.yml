@@ -1,12 +1,22 @@
 version: 0.2
 
+
 phases:
   install:
-    runtime-versions:
-      python: 3.8
+    commands:
+      - echo "start the build"
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
   build:
     commands:
-      - zip -r package.zip main.py
-artifacts:
-  files:
-    - package.zip
+      - echo Build started on `date`
+      - docker image build -t $ECR_REPO:$TAG --build-arg TESSCO_BASE_IMAGE=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/tessco-common/python:3.8 .
+      - docker tag $ECR_REPO:$TAG $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPO
+      - echo Pushing completed...
